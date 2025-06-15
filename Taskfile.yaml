@@ -1,0 +1,39 @@
+version: "3"
+
+vars:
+  # Source
+  SOURCE_MAIN_FILE: "./cmd/gotchex/main.go"
+  # Build
+  BUILD_DIR: "./build"
+  BUILD_BIN_FILE: "gotchex"
+
+tasks:
+  default:
+    silent: true
+    cmds:
+      - task --list --color
+
+  build:
+    desc: "Build the application"
+    cmds:
+      - go build -o {{.BUILD_DIR}}/{{.BUILD_BIN_FILE}} {{.SOURCE_MAIN_FILE}}
+
+  test:
+    desc: "Run tests"
+    cmds:
+      - go test ./... -v
+
+  format:
+    desc: "Format the code"
+    cmds:
+      - go fmt ./...
+
+  lint:
+    desc: "Lint the code (not implemented)"
+    cmds:
+      - golangci-lint run
+
+  tidy:
+    desc: "Run go mod tidy"
+    cmds:
+      - go mod tidy
