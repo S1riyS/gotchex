@@ -1,0 +1,10 @@
+watch:
+  delay: 1000
+  include_dir: [./src, ./app, ./tests]
+  include_regex: [".*\\.py$", ".*\\.pyi$", "requirements.*\\.txt$"]
+  exclude_dir: [./venv, ./__pycache__, ./dist]
+  exclude_regex: [".*/migrations/.*", ".*\\.pyc$"]
+
+# NOTE: it's allowed to have no build command
+run:
+  run: "python -m app.main"

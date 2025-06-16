@@ -1,0 +1,10 @@
+watch:
+  delay: 1000
+  include_dir: ["."]
+  include_regex: [".*\\.go$", ".*\\.mod$"]
+  exclude_dir: [./vendor, ./tmp]
+  exclude_regex: [".*_test\\.go$", ".*\\.tmp$"]
+
+run:
+  build: "go build -o app ."
+  run: "./app"
