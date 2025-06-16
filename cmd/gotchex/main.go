@@ -4,24 +4,20 @@ import (
 	"log"
 
 	"github.com/S1riyS/gotchex/internal/config"
+	"github.com/S1riyS/gotchex/internal/flags"
 	"github.com/S1riyS/gotchex/internal/runner"
 	"github.com/S1riyS/gotchex/internal/watcher"
 )
 
 func main() {
-	cfg := &config.Config{
-		Build: config.BuildConfig{
-			Command:      "echo 'File changed!'",
-			Delay:        1000,
-			IncludeDir:   []string{"."},
-			IncludeRegex: []string{".go"},
-			ExcludeDir:   []string{".git", "tmp"},
-			ExcludeRegex: []string{},
-		},
-	}
+	// Load flags
+	flags.Load()
 
-	commandRunner := runner.New(cfg.Build.Command)
-	fw, err := watcher.New(cfg, commandRunner)
+	// Load config
+	cfg := config.MustLoad(flags.ConfigPath)
+
+	commandRunner := runner.New(cfg.Run)
+	fw, err := watcher.New(cfg.Watch, commandRunner)
 	if err != nil {
 		log.Fatalf("Failed to create watcher: %v", err)
 	}
