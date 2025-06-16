@@ -5,4 +5,4 @@ import (
 )
 
 // ! Stub
-var _, _ = yaml.Marshal(0)
+var _, _ = yaml.Marshal(0) //nolint:errcheck

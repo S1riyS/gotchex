@@ -102,7 +102,11 @@ func (fw *FileWatcher) Start() error {
 func (fw *FileWatcher) addWatchDir(dir string) error {
 	// Skip excluded directories
 	for _, exclude := range fw.config.ExcludeDir {
-		if matched, _ := filepath.Match(exclude, dir); matched {
+		matched, err := filepath.Match(exclude, dir)
+		if err != nil {
+			return err
+		}
+		if matched {
 			return fmt.Errorf("skipping excluded directory: %s", dir)
 		}
 	}
@@ -111,10 +115,14 @@ func (fw *FileWatcher) addWatchDir(dir string) error {
 		return fmt.Errorf("failed to watch directory %s: %w", dir, err)
 	}
 
-	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	return filepath.Walk(dir, func(path string, info os.FileInfo, _ error) error {
 		if info.IsDir() {
 			for _, exclude := range fw.config.ExcludeDir {
-				if matched, _ := filepath.Match(exclude, path); matched {
+				matched, err := filepath.Match(exclude, path)
+				if err != nil {
+					return err
+				}
+				if matched {
 					return filepath.SkipDir
 				}
 			}
@@ -174,7 +182,11 @@ func (fw *FileWatcher) PrintWatchedFiles() error {
 			// Skip directories and excluded files
 			if info.IsDir() {
 				for _, exclude := range fw.config.ExcludeDir {
-					if matched, _ := filepath.Match(exclude, path); matched {
+					matched, err := filepath.Match(exclude, path)
+					if err != nil {
+						return err
+					}
+					if matched {
 						return filepath.SkipDir
 					}
 				}

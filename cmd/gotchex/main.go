@@ -22,7 +22,9 @@ func main() {
 		log.Fatalf("Failed to create watcher: %v", err)
 	}
 
-	fw.PrintWatchedFiles()
+	if err = fw.PrintWatchedFiles(); err != nil {
+		log.Printf("Failed to print watched files: %v", err)
+	}
 
 	log.Println("Starting file watcher...")
 	if err := fw.Start(); err != nil {
