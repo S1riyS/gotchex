@@ -1,14 +1,49 @@
 package config
 
+import (
+	"os"
+
+	"gopkg.in/yaml.v3"
+)
+
 type Config struct {
-	Build BuildConfig `yaml:"build"`
+	Watch *WatchConfig `yaml:"watch"`
+	Run   *RunConfig   `yaml:"run"`
 }
 
-type BuildConfig struct {
-	Command      string   `yaml:"command"`
+type WatchConfig struct {
 	Delay        int      `yaml:"delay"`
 	IncludeDir   []string `yaml:"include_dir"`
 	IncludeRegex []string `yaml:"include_regex"`
 	ExcludeDir   []string `yaml:"exclude_dir"`
 	ExcludeRegex []string `yaml:"exclude_regex"`
+}
+
+type RunConfig struct {
+	Build *string `yaml:"build"`
+	Run   string  `yaml:"run"`
+}
+
+func MustLoad(configPath string) *Config {
+	if configPath == "" {
+		panic("config path is empty")
+	}
+
+	// check if file exists
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		panic("config file does not exist: " + configPath)
+	}
+
+	var cfg Config
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		panic("Error reading file: " + err.Error())
+	}
+
+	err = yaml.Unmarshal(content, &cfg)
+	if err != nil {
+		panic("Error unmarshalling config")
+	}
+
+	return &cfg
 }
