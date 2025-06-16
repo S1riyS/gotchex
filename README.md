@@ -15,3 +15,4 @@
     - [yaml.v3](https://github.com/go-yaml/yaml) - YAML parser
 - Tools:
     - [Taskfile](https://taskfile.dev/) - Task runner / Build tool
+    - [Golangci-lint](https://golangci-lint.run/) - Go linters runner
