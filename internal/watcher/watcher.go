@@ -17,30 +17,31 @@ type Runner interface {
 }
 
 type FileWatcher struct {
+	config               *config.WatchConfig
+	runner               Runner
 	watcher              *fsnotify.Watcher
-	config               *config.Config
 	lastRun              time.Time
 	compiledIncludeRegex []*regexp.Regexp
 	compiledExcludeRegex []*regexp.Regexp
-	runner               Runner
 }
 
-func New(config *config.Config, runner Runner) (*FileWatcher, error) {
+// New creates a new FileWatcher instance
+func New(cfg *config.WatchConfig, runner Runner) (*FileWatcher, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create watcher: %w", err)
 	}
 
 	fw := &FileWatcher{
-		watcher:              watcher,
-		config:               config,
-		compiledIncludeRegex: make([]*regexp.Regexp, len(config.Build.IncludeRegex)),
-		compiledExcludeRegex: make([]*regexp.Regexp, len(config.Build.ExcludeRegex)),
+		config:               cfg,
 		runner:               runner,
+		watcher:              watcher,
+		compiledIncludeRegex: make([]*regexp.Regexp, len(cfg.IncludeRegex)),
+		compiledExcludeRegex: make([]*regexp.Regexp, len(cfg.ExcludeRegex)),
 	}
 
-	// Compile regex patterns once
-	for i, pattern := range config.Build.IncludeRegex {
+	// Compile regex patterns
+	for i, pattern := range cfg.IncludeRegex {
 		re, err := regexp.Compile(pattern)
 		if err != nil {
 			return nil, fmt.Errorf("invalid include regex pattern %q: %w", pattern, err)
@@ -48,7 +49,7 @@ func New(config *config.Config, runner Runner) (*FileWatcher, error) {
 		fw.compiledIncludeRegex[i] = re
 	}
 
-	for i, pattern := range config.Build.ExcludeRegex {
+	for i, pattern := range cfg.ExcludeRegex {
 		re, err := regexp.Compile(pattern)
 		if err != nil {
 			return nil, fmt.Errorf("invalid exclude regex pattern %q: %w", pattern, err)
@@ -57,7 +58,7 @@ func New(config *config.Config, runner Runner) (*FileWatcher, error) {
 	}
 
 	// Add directories to watch
-	for _, dir := range config.Build.IncludeDir {
+	for _, dir := range cfg.IncludeDir {
 		if err := fw.addWatchDir(dir); err != nil {
 			log.Printf("Warning: %v", err)
 		}
@@ -66,31 +67,7 @@ func New(config *config.Config, runner Runner) (*FileWatcher, error) {
 	return fw, nil
 }
 
-func (fw *FileWatcher) addWatchDir(dir string) error {
-	// Skip excluded directories
-	for _, exclude := range fw.config.Build.ExcludeDir {
-		if matched, _ := filepath.Match(exclude, dir); matched {
-			return fmt.Errorf("skipping excluded directory: %s", dir)
-		}
-	}
-
-	if err := fw.watcher.Add(dir); err != nil {
-		return fmt.Errorf("failed to watch directory %s: %w", dir, err)
-	}
-
-	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if info.IsDir() {
-			for _, exclude := range fw.config.Build.ExcludeDir {
-				if matched, _ := filepath.Match(exclude, path); matched {
-					return filepath.SkipDir
-				}
-			}
-			return fw.watcher.Add(path)
-		}
-		return nil
-	})
-}
-
+// Start starts the file watcher
 func (fw *FileWatcher) Start() error {
 	defer fw.watcher.Close()
 
@@ -106,7 +83,7 @@ func (fw *FileWatcher) Start() error {
 			}
 
 			// Debounce logic
-			if time.Since(fw.lastRun) < time.Duration(fw.config.Build.Delay)*time.Millisecond {
+			if time.Since(fw.lastRun) < time.Duration(fw.config.Delay)*time.Millisecond {
 				continue
 			}
 
@@ -120,6 +97,31 @@ func (fw *FileWatcher) Start() error {
 			log.Printf("Watcher error: %v", err)
 		}
 	}
+}
+
+func (fw *FileWatcher) addWatchDir(dir string) error {
+	// Skip excluded directories
+	for _, exclude := range fw.config.ExcludeDir {
+		if matched, _ := filepath.Match(exclude, dir); matched {
+			return fmt.Errorf("skipping excluded directory: %s", dir)
+		}
+	}
+
+	if err := fw.watcher.Add(dir); err != nil {
+		return fmt.Errorf("failed to watch directory %s: %w", dir, err)
+	}
+
+	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if info.IsDir() {
+			for _, exclude := range fw.config.ExcludeDir {
+				if matched, _ := filepath.Match(exclude, path); matched {
+					return filepath.SkipDir
+				}
+			}
+			return fw.watcher.Add(path)
+		}
+		return nil
+	})
 }
 
 func (fw *FileWatcher) shouldHandleEvent(event fsnotify.Event) bool {
@@ -153,15 +155,17 @@ func (fw *FileWatcher) shouldHandleEvent(event fsnotify.Event) bool {
 }
 
 func (fw *FileWatcher) executeCommand() {
-	log.Printf("Executing command: %s", fw.config.Build.Command)
-	fw.runner.Run()
+	err := fw.runner.Run()
+	if err != nil {
+		log.Printf("Error running command: %v", err)
+	}
 }
 
 func (fw *FileWatcher) PrintWatchedFiles() error {
 	fmt.Println("=== Watched Files ===")
 
 	// Check all included directories
-	for _, dir := range fw.config.Build.IncludeDir {
+	for _, dir := range fw.config.IncludeDir {
 		err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
@@ -169,7 +173,7 @@ func (fw *FileWatcher) PrintWatchedFiles() error {
 
 			// Skip directories and excluded files
 			if info.IsDir() {
-				for _, exclude := range fw.config.Build.ExcludeDir {
+				for _, exclude := range fw.config.ExcludeDir {
 					if matched, _ := filepath.Match(exclude, path); matched {
 						return filepath.SkipDir
 					}
