@@ -1,1 +1,9 @@
+# Binaries
+/bin
+
+# Build dir
 **/build/
+
+# Tmp files
+gotex.tmp.yaml
+/tmp
