@@ -24,9 +24,11 @@ type RunConfig struct {
 	Run   string  `yaml:"run"`
 }
 
+const DEFAULT_CONFIG_PATH = "gotchex.yaml"
+
 func MustLoad(configPath string) *Config {
 	if configPath == "" {
-		panic("config path is empty")
+		configPath = DEFAULT_CONFIG_PATH
 	}
 
 	// check if file exists
